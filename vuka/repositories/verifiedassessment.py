@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+
 from vuka.models.verifiedassessment import VerifiedAssessment
 
 
@@ -16,7 +17,9 @@ class VerifiedAssessmentRepository:
     def get_by_id(self, assessment_id: int):
         return self.db.get(self.model, assessment_id)
 
-    def get_by_user_and_generated(self, user_id: int, generated_assessment_id: int, in_progress_only: bool = False):
+    def get_by_user_and_generated(
+        self, user_id: int, generated_assessment_id: int, in_progress_only: bool = False
+    ):
         query = self.db.query(self.model).filter(
             self.model.user_id == user_id,
             self.model.generated_assessment_id == generated_assessment_id,
@@ -25,7 +28,9 @@ class VerifiedAssessmentRepository:
             query = query.filter(self.model.status == "in_progress")
         return query.order_by(self.model.assessment_date.desc()).first()
 
-    def get_latest_completed_by_user_and_generated(self, user_id: int, generated_assessment_id: int):
+    def get_latest_completed_by_user_and_generated(
+        self, user_id: int, generated_assessment_id: int
+    ):
         return (
             self.db.query(self.model)
             .filter(

@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
+
 from sqlalchemy.orm import Session
+
 from vuka.models.content_pathway import ContentPathway
 
 
@@ -12,12 +14,17 @@ class ContentPathwayRepository:
         return self.db.get(self.model, content_pathway_id)
 
     def get_by_content(self, content_id: int):
-        return self.db.query(self.model).filter(self.model.content_id == content_id).all()
+        return (
+            self.db.query(self.model).filter(self.model.content_id == content_id).all()
+        )
 
     def get_by_onboarding_content(self, onboarding_id: int, content_id: int):
         return (
             self.db.query(self.model)
-            .filter(self.model.onboarding_id == onboarding_id, self.model.content_id == content_id)
+            .filter(
+                self.model.onboarding_id == onboarding_id,
+                self.model.content_id == content_id,
+            )
             .first()
         )
 
@@ -26,7 +33,9 @@ class ContentPathwayRepository:
             self.db.query(self.model)
             .filter(self.model.onboarding_id == onboarding_id)
             .order_by(self.model.date.desc(), self.model.content_pathway_id.desc())
-            .offset(skip).limit(limit).all()
+            .offset(skip)
+            .limit(limit)
+            .all()
         )
 
     def create(self, data: dict):

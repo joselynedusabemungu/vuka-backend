@@ -1,0 +1,26 @@
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+exclude = [
+    ".git",
+    "__pycache__",
+    ".venv",
+    "venv",
+    "env",
+    "alembic",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]  # Errors, pyflakes, import sorting, warnings
+ignore = [
+    "B008",   # FastAPI's Depends() in defaults is the standard pattern
+    "BLE001", # Blinde excepts are fine when we handle/log the error
+    "DTZ005", # datetime.now() without tz - not critical for this project
+    "DTZ011", # date.today() without tz - same reason
+    "RUF012", # Mutable class attribute - not a real bug here
+    "RUF059", # Unused unpacked variable - minor
+]
+
+[tool.ruff.lint.per-file-ignores]
+"vuka/routers/*.py" = ["B008"]
+"vuka/dependency.py" = ["B008"]

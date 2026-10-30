@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 import json
 import os
 import time
-from typing import Any, Optional
+from typing import Any
+
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
@@ -33,7 +35,7 @@ class _RankedResponse(BaseModel):
 
 
 class GeminiClient:
-    def __init__(self, api_key: Optional[str] = None, model: str = GEMINI_MODEL):
+    def __init__(self, api_key: str | None = None, model: str = GEMINI_MODEL):
         self.api_key = api_key or os.getenv("GEMINI_API_KEY")
         if not self.api_key:
             raise RuntimeError("GEMINI_API_KEY is not configured")
@@ -43,13 +45,15 @@ class GeminiClient:
     def _get_client(self):
         if self._client is None:
             from google import genai
+
             self._client = genai.Client(api_key=self.api_key)
         return self._client
 
     def _json_call(self, prompt: str, response_schema: Any, retries: int = 2):
         from google.genai import types
+
         last_exc: Exception | None = None
-        
+
         for attempt in range(retries + 1):
             try:
                 response = self._get_client().models.generate_content(
@@ -61,21 +65,23 @@ class GeminiClient:
                         temperature=0.2,
                     ),
                 )
-                
+
                 if response and response.parsed is not None:
                     return response.parsed.model_dump()
                 if response and response.text:
                     return json.loads(response.text)
-                    
+
                 raise RuntimeError("Gemini returned an empty response")
-                
+
             except Exception as exc:
                 last_exc = exc
                 print(f"⚠️ [GEMINI API ERROR] Attempt {attempt + 1} failed: {exc}")
                 if attempt < retries:
                     time.sleep(2.0)
-                    
-        raise RuntimeError(f"Gemini call failed after {retries + 1} attempts: {last_exc}")
+
+        raise RuntimeError(
+            f"Gemini call failed after {retries + 1} attempts: {last_exc}"
+        )
 
     def generate_quiz(
         self,
@@ -83,7 +89,7 @@ class GeminiClient:
         source_platform: str,
         external_media_url: str,
         num_questions: int = 10,
-        category_hint: Optional[str] = None,
+        category_hint: str | None = None,
     ) -> dict:
         prompt = f"""
 You are the assessment engine for VUKA.
@@ -101,19 +107,23 @@ Content description:
 """
         if category_hint:
             prompt += f"\nPreferred category when appropriate: {category_hint}\n"
-            
+
         data = self._json_call(prompt, _GenQuizResponse)
         result = _GenQuizResponse.model_validate(data)
-        
+
         if len(result.questions) != num_questions:
-            raise RuntimeError(f"Gemini returned {len(result.questions)} questions; expected {num_questions}")
-            
+            raise RuntimeError(
+                f"Gemini returned {len(result.questions)} questions; expected {num_questions}"
+            )
+
         return result.model_dump()
 
-    def rank_content(self, profile: dict[str, Any], candidates: list[dict[str, Any]], limit: int = 10) -> list[dict[str, Any]]:
+    def rank_content(
+        self, profile: dict[str, Any], candidates: list[dict[str, Any]], limit: int = 10
+    ) -> list[dict[str, Any]]:
         if not candidates:
             return []
-            
+
         prompt = f"""
 You are VUKA's content-matching engine.
 Rank educational content for one Kenyan high-school graduate using their onboarding profile.
@@ -129,7 +139,7 @@ CANDIDATES (index is the candidate identifier):
 """
         data = self._json_call(prompt, _RankedResponse)
         ranked = _RankedResponse.model_validate(data).items
-        
+
         output = []
         seen = set()
         for item in sorted(ranked, key=lambda x: x.score, reverse=True):
@@ -152,7 +162,7 @@ CANDIDATES (index is the candidate identifier):
     ) -> list[dict[str, Any]]:
         if not candidates:
             return []
-            
+
         prompt = f"""
 You are VUKA's opportunity-matching engine.
 Rank opportunities for a Kenyan learner using their onboarding profile and verified assessment performance.
@@ -172,7 +182,7 @@ CANDIDATES:
 """
         data = self._json_call(prompt, _RankedResponse)
         ranked = _RankedResponse.model_validate(data).items
-        
+
         output = []
         seen = set()
         for item in sorted(ranked, key=lambda x: x.score, reverse=True):

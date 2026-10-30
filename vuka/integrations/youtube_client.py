@@ -10,6 +10,7 @@ from googleapiclient.errors import HttpError
 
 load_dotenv()
 
+
 class YouTubeClient:
     def __init__(self, api_key: str | None = None) -> None:
         self.api_key = api_key or os.getenv("YOUTUBE_API_KEY")
@@ -44,12 +45,14 @@ class YouTubeClient:
             if not video_id:
                 continue
 
-            results.append({
-                "platform": "youtube",
-                "title": str(snippet.get("title") or "").strip(),
-                "url": f"https://www.youtube.com/watch?v={video_id}",
-                "description": str(snippet.get("description") or "").strip(),
-            })
+            results.append(
+                {
+                    "platform": "youtube",
+                    "title": str(snippet.get("title") or "").strip(),
+                    "url": f"https://www.youtube.com/watch?v={video_id}",
+                    "description": str(snippet.get("description") or "").strip(),
+                }
+            )
 
         return results
 

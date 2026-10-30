@@ -1,14 +1,19 @@
 from __future__ import annotations
+
 import json
 from datetime import datetime, timezone
+
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from vuka.repositories.verifiedassessment import VerifiedAssessmentRepository
+from vuka.models.verifiedassessment import VerifiedAssessment
 from vuka.repositories.generated_assessment import GeneratedAssessmentRepository
 from vuka.repositories.userprogress import UserProgressRepository
-from vuka.models.verifiedassessment import VerifiedAssessment
-from vuka.schemas.verifiedassessment import AssessmentProgressUpdate, AssessmentSubmission
+from vuka.repositories.verifiedassessment import VerifiedAssessmentRepository
+from vuka.schemas.verifiedassessment import (
+    AssessmentProgressUpdate,
+    AssessmentSubmission,
+)
 
 
 class VerifiedAssessmentService:
@@ -51,20 +56,43 @@ class VerifiedAssessmentService:
         try:
             questions = json.loads(generated.questions)
         except (TypeError, json.JSONDecodeError) as exc:
-            raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "Stored generated assessment is invalid") from exc
+            raise HTTPException(
+                status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "Stored generated assessment is invalid",
+            ) from exc
         if not isinstance(questions, list) or not questions:
-            raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "Generated assessment contains no questions")
+            raise HTTPException(
+                status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "Generated assessment contains no questions",
+            )
         for q in questions:
-            if not isinstance(q, dict) or not isinstance(q.get("options"), list) or len(q["options"]) != 4 or not isinstance(q.get("correct_index"), int):
-                raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "Generated assessment has an invalid question format")
+            if (
+                not isinstance(q, dict)
+                or not isinstance(q.get("options"), list)
+                or len(q["options"]) != 4
+                or not isinstance(q.get("correct_index"), int)
+            ):
+                raise HTTPException(
+                    status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    "Generated assessment has an invalid question format",
+                )
             if not 0 <= q["correct_index"] < 4:
-                raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "Generated assessment has an invalid answer key")
+                raise HTTPException(
+                    status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    "Generated assessment has an invalid answer key",
+                )
         return questions
 
-    def _response(self, assessment: VerifiedAssessment, include_questions: bool = True) -> dict:
+    def _response(
+        self, assessment: VerifiedAssessment, include_questions: bool = True
+    ) -> dict:
         generated = self.generated_repo.get_by_id(assessment.generated_assessment_id)
         questions = self._parse_questions(generated)
-        safe_questions = [{"question": q["question"], "options": q["options"]} for q in questions] if include_questions else None
+        safe_questions = (
+            [{"question": q["question"], "options": q["options"]} for q in questions]
+            if include_questions
+            else None
+        )
         progress = self.progress_repo.get_by_assessment(assessment.assessment_id)
         return {
             "assessment_id": assessment.assessment_id,
@@ -87,8 +115,7 @@ class VerifiedAssessmentService:
 
         pathways = ContentPathwayRepository(self.db).get_by_content(content_id)
         user_pathways = [
-            p for p in pathways
-            if p.onboarding and p.onboarding.user_id == user_id
+            p for p in pathways if p.onboarding and p.onboarding.user_id == user_id
         ]
 
         if not user_pathways:
@@ -108,14 +135,20 @@ class VerifiedAssessmentService:
     def start(self, user_id: int, generated_assessment_id: int):
         generated = self.generated_repo.get_by_id(generated_assessment_id)
         if not generated:
-            raise HTTPException(status.HTTP_404_NOT_FOUND, "Generated assessment not found")
+            raise HTTPException(
+                status.HTTP_404_NOT_FOUND, "Generated assessment not found"
+            )
 
-        pathways = self._check_content_access(user_id, generated.content_id)
+        self._check_content_access(user_id, generated.content_id)
 
-        existing = self.repository.get_by_user_and_generated(user_id, generated_assessment_id, in_progress_only=True)
+        existing = self.repository.get_by_user_and_generated(
+            user_id, generated_assessment_id, in_progress_only=True
+        )
         if existing:
             return self._response(existing)
-        previous = self.repository.get_latest_completed_by_user_and_generated(user_id, generated_assessment_id)
+        previous = self.repository.get_latest_completed_by_user_and_generated(
+            user_id, generated_assessment_id
+        )
         if previous and previous.performance_tier != "Low":
             raise HTTPException(
                 status.HTTP_409_CONFLICT,
@@ -139,44 +172,66 @@ class VerifiedAssessmentService:
     def get_for_user(self, assessment_id: int, user_id: int):
         assessment = self.repository.get_by_id(assessment_id)
         if not assessment:
-            raise HTTPException(status.HTTP_404_NOT_FOUND, "Assessment attempt not found")
+            raise HTTPException(
+                status.HTTP_404_NOT_FOUND, "Assessment attempt not found"
+            )
         if assessment.user_id != user_id:
-            raise HTTPException(status.HTTP_403_FORBIDDEN, "Assessment does not belong to the user")
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN, "Assessment does not belong to the user"
+            )
         return self._response(assessment)
 
     def get_resume(self, user_id: int, generated_assessment_id: int):
         generated = self.generated_repo.get_by_id(generated_assessment_id)
         if not generated:
-            raise HTTPException(status.HTTP_404_NOT_FOUND, "Generated assessment not found")
+            raise HTTPException(
+                status.HTTP_404_NOT_FOUND, "Generated assessment not found"
+            )
 
         self._check_content_access(user_id, generated.content_id)
 
-        assessment = self.repository.get_by_user_and_generated(user_id, generated_assessment_id, in_progress_only=True)
+        assessment = self.repository.get_by_user_and_generated(
+            user_id, generated_assessment_id, in_progress_only=True
+        )
         if not assessment:
             return None
         return self._response(assessment)
 
-    def save_progress(self, assessment_id: int, user_id: int, payload: AssessmentProgressUpdate):
+    def save_progress(
+        self, assessment_id: int, user_id: int, payload: AssessmentProgressUpdate
+    ):
         assessment = self.repository.get_by_id(assessment_id)
         if not assessment:
-            raise HTTPException(status.HTTP_404_NOT_FOUND, "Assessment attempt not found")
+            raise HTTPException(
+                status.HTTP_404_NOT_FOUND, "Assessment attempt not found"
+            )
         if assessment.user_id != user_id:
-            raise HTTPException(status.HTTP_403_FORBIDDEN, "Assessment does not belong to the user")
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN, "Assessment does not belong to the user"
+            )
         if assessment.status == "completed":
-            raise HTTPException(status.HTTP_409_CONFLICT, "Completed assessments cannot be edited")
+            raise HTTPException(
+                status.HTTP_409_CONFLICT, "Completed assessments cannot be edited"
+            )
 
         generated = self.generated_repo.get_by_id(assessment.generated_assessment_id)
         questions = self._parse_questions(generated)
         answers = dict(assessment.answers or {})
         for answer in payload.answers:
             if answer.question_index >= len(questions):
-                raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Question index is outside the assessment")
+                raise HTTPException(
+                    status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    "Question index is outside the assessment",
+                )
             answers[str(answer.question_index)] = answer.selected_index
 
-        assessment = self.repository.update(assessment_id, {
-            "answers": answers,
-            "current_step": min(payload.current_step, len(questions)),
-        })
+        assessment = self.repository.update(
+            assessment_id,
+            {
+                "answers": answers,
+                "current_step": min(payload.current_step, len(questions)),
+            },
+        )
         self.db.commit()
         self.db.refresh(assessment)
         return self._response(assessment)
@@ -185,12 +240,18 @@ class VerifiedAssessmentService:
         expected = {str(i) for i in range(len(questions))}
         if set(answers.keys()) != expected:
             missing = sorted(expected - set(answers.keys()), key=int)
-            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, f"All questions must be answered before submission. Missing: {missing}")
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                f"All questions must be answered before submission. Missing: {missing}",
+            )
         correct = 0
         for index, question in enumerate(questions):
             selected = answers[str(index)]
             if not isinstance(selected, int) or not 0 <= selected < 4:
-                raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, f"Invalid selected option for question {index}")
+                raise HTTPException(
+                    status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    f"Invalid selected option for question {index}",
+                )
             correct += selected == question["correct_index"]
         return round(correct / len(questions) * 100)
 
@@ -209,21 +270,30 @@ class VerifiedAssessmentService:
     def submit(self, assessment_id: int, user_id: int, payload: AssessmentSubmission):
         assessment = self.repository.get_by_id(assessment_id)
         if not assessment:
-            raise HTTPException(status.HTTP_404_NOT_FOUND, "Assessment attempt not found")
+            raise HTTPException(
+                status.HTTP_404_NOT_FOUND, "Assessment attempt not found"
+            )
         if assessment.user_id != user_id:
-            raise HTTPException(status.HTTP_403_FORBIDDEN, "Assessment does not belong to the user")
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN, "Assessment does not belong to the user"
+            )
         if assessment.status == "completed":
             return self._response(assessment)
 
         generated = self.generated_repo.get_by_id(assessment.generated_assessment_id)
         if not generated:
-            raise HTTPException(status.HTTP_404_NOT_FOUND, "Generated assessment not found")
+            raise HTTPException(
+                status.HTTP_404_NOT_FOUND, "Generated assessment not found"
+            )
         questions = self._parse_questions(generated)
 
         answers = dict(assessment.answers or {})
         for answer in payload.answers:
             if answer.question_index >= len(questions):
-                raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Question index is outside the assessment")
+                raise HTTPException(
+                    status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    "Question index is outside the assessment",
+                )
             answers[str(answer.question_index)] = answer.selected_index
 
         score = self._calculate_score(questions, answers)
@@ -232,27 +302,35 @@ class VerifiedAssessmentService:
         completion_date = completed_at.date()
         streak = self._previous_streak(user_id, completion_date)
 
-        assessment = self.repository.update(assessment_id, {
-            "answers": answers,
-            "current_step": len(questions),
-            "score": score,
-            "status": "completed",
-            "performance_tier": tier,
-            "streak_awarded": streak,
-            "completed_at": completed_at,
-        })
+        assessment = self.repository.update(
+            assessment_id,
+            {
+                "answers": answers,
+                "current_step": len(questions),
+                "score": score,
+                "status": "completed",
+                "performance_tier": tier,
+                "streak_awarded": streak,
+                "completed_at": completed_at,
+            },
+        )
 
         progress = self.progress_repo.get_by_assessment(assessment_id)
         if progress:
-            self.progress_repo.update(progress, {"score": score, "streak_count": streak, "performance_tier": tier})
+            self.progress_repo.update(
+                progress,
+                {"score": score, "streak_count": streak, "performance_tier": tier},
+            )
         else:
-            progress = self.progress_repo.create({
-                "user_id": user_id,
-                "assessment_id": assessment_id,
-                "score": score,
-                "streak_count": streak,
-                "performance_tier": tier,
-            })
+            progress = self.progress_repo.create(
+                {
+                    "user_id": user_id,
+                    "assessment_id": assessment_id,
+                    "score": score,
+                    "streak_count": streak,
+                    "performance_tier": tier,
+                }
+            )
 
         self.db.commit()
         self.db.refresh(assessment)

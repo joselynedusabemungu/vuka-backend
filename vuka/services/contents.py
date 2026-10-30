@@ -11,8 +11,8 @@ from vuka.integrations.gemini_client import GeminiClient
 from vuka.integrations.serper_client import SerperClient
 from vuka.integrations.youtube_client import YouTubeClient
 from vuka.models.onboarding import Onboarding
-from vuka.repositories.contents import ContentRepository
 from vuka.repositories.content_pathway import ContentPathwayRepository
+from vuka.repositories.contents import ContentRepository
 from vuka.schemas.contents import ContentCreate, ContentUpdate
 
 
@@ -97,7 +97,7 @@ class ContentService:
     def update(self, content_id: int, schema_data: ContentUpdate):
         self.get_by_id(content_id)
         data = schema_data.model_dump(exclude_unset=True, mode="json")
-        if "external_media_url" in data and data["external_media_url"]:
+        if data.get("external_media_url"):
             data["external_media_url"] = str(data["external_media_url"])
         return self.repo.update(content_id, data)
 
@@ -109,7 +109,9 @@ class ContentService:
     def _content_record(result: dict, fallback_platform: str) -> dict:
         url = str(result.get("url") or result.get("link") or "").strip()
         title = str(result.get("title") or "").strip()
-        description = str(result.get("description") or result.get("snippet") or title).strip()
+        description = str(
+            result.get("description") or result.get("snippet") or title
+        ).strip()
 
         if title and title in description:
             media_description = description
@@ -143,17 +145,61 @@ class ContentService:
     def _build_search_terms(self, onboarding: Onboarding) -> list[str]:
         interests = self._flatten_profile_values(onboarding.user_interests)
         goals = self._flatten_profile_values(onboarding.user_goal)
-        career = [onboarding.career_aspirations] if onboarding.career_aspirations else []
+        career = (
+            [onboarding.career_aspirations] if onboarding.career_aspirations else []
+        )
 
         raw_terms = interests + goals + career
 
         stopwords = {
-            "i", "a", "an", "the", "to", "of", "and", "or", "in", "on", "at",
-            "is", "am", "are", "be", "want", "wants", "like", "would", "will",
-            "my", "me", "mine", "this", "that", "it", "for", "with", "from",
-            "about", "learn", "learning", "master", "mastering", "art", "how",
-            "get", "getting", "become", "becoming", "study", "studying", "well",
-            "career", "skills", "explore", "interested", "interest",
+            "i",
+            "a",
+            "an",
+            "the",
+            "to",
+            "of",
+            "and",
+            "or",
+            "in",
+            "on",
+            "at",
+            "is",
+            "am",
+            "are",
+            "be",
+            "want",
+            "wants",
+            "like",
+            "would",
+            "will",
+            "my",
+            "me",
+            "mine",
+            "this",
+            "that",
+            "it",
+            "for",
+            "with",
+            "from",
+            "about",
+            "learn",
+            "learning",
+            "master",
+            "mastering",
+            "art",
+            "how",
+            "get",
+            "getting",
+            "become",
+            "becoming",
+            "study",
+            "studying",
+            "well",
+            "career",
+            "skills",
+            "explore",
+            "interested",
+            "interest",
         }
 
         cleaned_keywords = []
@@ -203,8 +249,12 @@ class ContentService:
                     media_description=content.media_description,
                     date=pathway.date,
                     source_platform=content.source_platform,
-                    relevance_score=(row.get("relevance_score") or pathway.relevance_score),
-                    relevance_reason=(row.get("relevance_reason") or pathway.relevance_reason),
+                    relevance_score=(
+                        row.get("relevance_score") or pathway.relevance_score
+                    ),
+                    relevance_reason=(
+                        row.get("relevance_reason") or pathway.relevance_reason
+                    ),
                     generated_assessment_id=(
                         content.generated_assessment.assessment_id
                         if content.generated_assessment
@@ -236,16 +286,21 @@ class ContentService:
         labels = []
 
         if "youtube" in platforms:
+
             async def youtube_task():
                 try:
-                    return await YouTubeClient().search(keyword=keyword, max_results=min(limit, 20))
+                    return await YouTubeClient().search(
+                        keyword=keyword, max_results=min(limit, 20)
+                    )
                 except Exception as exc:
                     print(f"[ERROR] YouTube fetch failed: {exc}")
                     return []
+
             tasks.append(youtube_task())
             labels.append("youtube")
 
         if "tiktok" in platforms:
+
             async def tiktok_task():
                 try:
                     return await SerperClient().search_social(
@@ -256,10 +311,12 @@ class ContentService:
                 except Exception as exc:
                     print(f"[ERROR] TikTok fetch failed: {exc}")
                     return []
+
             tasks.append(tiktok_task())
             labels.append("tiktok")
 
         if "instagram" in platforms:
+
             async def instagram_task():
                 try:
                     return await SerperClient().search_social(
@@ -270,16 +327,21 @@ class ContentService:
                 except Exception as exc:
                     print(f"[ERROR] Instagram fetch failed: {exc}")
                     return []
+
             tasks.append(instagram_task())
             labels.append("instagram")
 
         if not tasks:
+
             async def default_youtube():
                 try:
-                    return await YouTubeClient().search(keyword=keyword, max_results=min(limit, 20))
+                    return await YouTubeClient().search(
+                        keyword=keyword, max_results=min(limit, 20)
+                    )
                 except Exception as exc:
                     print(f"[ERROR] YouTube fetch failed: {exc}")
                     return []
+
             tasks.append(default_youtube())
             labels.append("youtube")
 
@@ -326,7 +388,9 @@ class ContentService:
         gemini = self.gemini or GeminiClient()
         try:
             print(f"[AI] Sending {len(candidates)} candidates to Gemini")
-            ranked = await asyncio.to_thread(gemini.rank_content, profile, candidates, limit)
+            ranked = await asyncio.to_thread(
+                gemini.rank_content, profile, candidates, limit
+            )
             print(f"[AI] Gemini returned {len(ranked)} matches")
         except Exception as exc:
             print(f"[ERROR] Gemini matching failed: {exc}")
@@ -338,7 +402,9 @@ class ContentService:
         saved = []
         for candidate in ranked:
             url = candidate["url"]
-            data = self._content_record(candidate, candidate.get("platform", "external"))
+            data = self._content_record(
+                candidate, candidate.get("platform", "external")
+            )
 
             existing = self.repo.get_by_url(url)
             content = existing or self.repo.create(data)

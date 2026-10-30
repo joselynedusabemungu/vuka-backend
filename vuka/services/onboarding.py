@@ -67,10 +67,7 @@ def update_onboarding(db: Session, onboarding_id: int, onboarding):
 def get_user_onboarding(db: Session, onboarding_id: int, current_user):
     record = get_onboarding(db, onboarding_id)
 
-    if (
-        current_user.user_type != "admin"
-        and record.user_id != current_user.user_id
-    ):
+    if current_user.user_type != "admin" and record.user_id != current_user.user_id:
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,
             "Cannot access another user's onboarding",
@@ -87,10 +84,7 @@ def update_user_onboarding(
 ):
     record = get_onboarding(db, onboarding_id)
 
-    if (
-        current_user.user_type != "admin"
-        and record.user_id != current_user.user_id
-    ):
+    if current_user.user_type != "admin" and record.user_id != current_user.user_id:
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,
             "Cannot modify another user's onboarding",

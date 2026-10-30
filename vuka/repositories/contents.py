@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+
 from vuka.models.contents import Content
 
 
@@ -11,7 +12,11 @@ class ContentRepository:
         return self.db.get(self.model, content_id)
 
     def get_by_url(self, external_media_url: str):
-        return self.db.query(self.model).filter(self.model.external_media_url == external_media_url).first()
+        return (
+            self.db.query(self.model)
+            .filter(self.model.external_media_url == external_media_url)
+            .first()
+        )
 
     def get_all(self, skip: int = 0, limit: int = 50):
         return self.db.query(self.model).offset(skip).limit(limit).all()

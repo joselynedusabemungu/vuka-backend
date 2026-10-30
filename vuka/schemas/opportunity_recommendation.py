@@ -65,9 +65,7 @@ class OpportunityRecommendationUpdate(BaseModel):
     match_reason: str | None = None
 
 
-class OpportunityRecommendationRead(
-    OpportunityRecommendationBase
-):
+class OpportunityRecommendationRead(OpportunityRecommendationBase):
 
     opportunity_id: int
 
@@ -94,9 +92,7 @@ class OpportunitySubjectFetchRequest(BaseModel):
 
 class UserOpportunityResponse(BaseModel):
 
-    opportunities: list[
-        OpportunityRecommendationRead
-    ]
+    opportunities: list[OpportunityRecommendationRead]
 
     performance_tier: str
 

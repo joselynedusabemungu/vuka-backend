@@ -1,7 +1,9 @@
 import enum
+
 from sqlalchemy import ARRAY, Column, Enum, ForeignKey, Integer, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
+
 from database import Base
 
 
@@ -17,8 +19,11 @@ class Onboarding(Base):
 
     onboarding_id = Column(Integer, primary_key=True, index=True)
     user_id = Column(
-        Integer, ForeignKey("registrations.user_id", ondelete="CASCADE"),
-        unique=True, nullable=False, index=True,
+        Integer,
+        ForeignKey("registrations.user_id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
+        index=True,
     )
     user_interests = Column(JSONB, nullable=False)
     social_platforms = Column(ARRAY(Enum(SocialPlatformEnum)), nullable=False)

@@ -4,10 +4,9 @@ from sqlalchemy.orm import Session
 from database import get_db
 from vuka.dependency import get_current_user, require_admin
 from vuka.models.registration import Registration
-from vuka.schemas.contents import ContentResponse
 from vuka.schemas.content_pathway import RecommendedContentResponse
+from vuka.schemas.contents import ContentResponse
 from vuka.services.contents import ContentService
-
 
 router = APIRouter(tags=["Contents"])
 

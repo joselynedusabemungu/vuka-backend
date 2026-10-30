@@ -1,13 +1,16 @@
 from sqlalchemy import Boolean, Column, DateTime, Integer, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+
 from database import Base
 
 
 class Registration(Base):
     __tablename__ = "registrations"
 
-    user_id = Column(Integer, primary_key=True, autoincrement=True, index=True, nullable=False)
+    user_id = Column(
+        Integer, primary_key=True, autoincrement=True, index=True, nullable=False
+    )
     first_name = Column(String, nullable=False)
     last_name = Column(String, nullable=False)
     username = Column(String, unique=True, nullable=False)
@@ -32,8 +35,13 @@ class Registration(Base):
         "UserProgress", back_populates="registration", cascade="all, delete-orphan"
     )
     verified_assessments = relationship(
-        "VerifiedAssessment", back_populates="registration", cascade="all, delete-orphan"
+        "VerifiedAssessment",
+        back_populates="registration",
+        cascade="all, delete-orphan",
     )
     onboarding = relationship(
-        "Onboarding", back_populates="registration", uselist=False, cascade="all, delete-orphan"
+        "Onboarding",
+        back_populates="registration",
+        uselist=False,
+        cascade="all, delete-orphan",
     )

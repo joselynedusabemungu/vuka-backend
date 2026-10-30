@@ -10,7 +10,6 @@ from vuka.schemas.verification import (
 )
 from vuka.services.verification import VerificationService
 
-
 router = APIRouter(
     prefix="/graduate-verification",
     tags=["Graduate Verification"],
@@ -51,9 +50,7 @@ def my_documents(
     current_user: Registration = Depends(get_current_user),
     service: VerificationService = Depends(get_service),
 ):
-    return service.get_my_documents(
-        current_user.user_id
-    )
+    return service.get_my_documents(current_user.user_id)
 
 
 @router.get(

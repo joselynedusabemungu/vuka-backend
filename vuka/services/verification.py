@@ -16,9 +16,7 @@ class VerificationService:
         os.getenv("VERIFICATION_UPLOAD_DIR", "./uploads/verification")
     ).resolve()
 
-    MAX_SIZE = int(
-        os.getenv("VERIFICATION_MAX_FILE_SIZE", "5242880")
-    )
+    MAX_SIZE = int(os.getenv("VERIFICATION_MAX_FILE_SIZE", "5242880"))
 
     ALLOWED = {
         "pdf": "application/pdf",
@@ -97,13 +95,9 @@ class VerificationService:
             exist_ok=True,
         )
 
-        reference = (
-            f"{user_id}/{secrets.token_urlsafe(32)}.{ext}"
-        )
+        reference = f"{user_id}/{secrets.token_urlsafe(32)}.{ext}"
 
-        path = (
-            self.UPLOAD_DIR / reference
-        ).resolve()
+        path = (self.UPLOAD_DIR / reference).resolve()
 
         if self.UPLOAD_DIR not in path.parents:
             raise HTTPException(

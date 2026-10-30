@@ -7,9 +7,6 @@ from pathlib import Path
 
 from database import SessionLocal
 from vuka.models.contents import Content
-import vuka.models  
-from vuka.models.verifiedassessment import VerifiedAssessment  
-from vuka.models.userprogress import UserProgress  
 
 DEFAULT_CSV = Path(__file__).parent / "content_seed.csv"
 
@@ -29,7 +26,9 @@ def run(csv_path: Path) -> None:
                 data = {
                     "external_media_url": row["external_media_url"].strip(),
                     "source_platform": row["source platform"].strip(),
-                    "media_description": (row.get("media_description") or "No description provided.").strip()
+                    "media_description": (
+                        row.get("media_description") or "No description provided."
+                    ).strip()
                     or "No description provided.",
                     "datetime": parse_datetime(row["datetime"]),
                 }
@@ -50,7 +49,11 @@ def run(csv_path: Path) -> None:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Seed the content table from a CSV export.")
-    parser.add_argument("--csv", type=Path, default=DEFAULT_CSV, help="Path to the content CSV file.")
+    parser = argparse.ArgumentParser(
+        description="Seed the content table from a CSV export."
+    )
+    parser.add_argument(
+        "--csv", type=Path, default=DEFAULT_CSV, help="Path to the content CSV file."
+    )
     args = parser.parse_args()
     run(args.csv)

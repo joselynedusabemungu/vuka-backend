@@ -3,15 +3,14 @@ from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from vuka.repositories.userprogress import UserProgressRepository
 from vuka.repositories.registration import RegistrationRepository
+from vuka.repositories.userprogress import UserProgressRepository
 from vuka.schemas.userprogress import (
-    ProgressSummary,
     CategoryScore,
     CompletedAssessment,
+    ProgressSummary,
     WeeklyActivityDay,
 )
-
 
 WEEKDAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"]
 
@@ -92,9 +91,7 @@ class UserProgressService:
                     assessment_id=row.assessment_id,
                     progress_id=row.progress_id,
                     category=row.category,
-                    assessment_date=row.completed_at.astimezone(
-                        timezone.utc
-                    ).date(),
+                    assessment_date=row.completed_at.astimezone(timezone.utc).date(),
                     score=row.score,
                     performance_tier=row.performance_tier or "Low",
                 )

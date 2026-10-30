@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-SERPER_SEARCH_URL = os.getenv("SERPER_URL", "https://google.serper.dev/search" )
+SERPER_SEARCH_URL = os.getenv("SERPER_URL", "https://google.serper.dev/search")
 
 
 class SerperClient:
@@ -38,7 +38,11 @@ class SerperClient:
         description = str(item.get("snippet") or "").strip()
 
         parsed_url = urlparse(url)
-        if not url or parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc:
+        if (
+            not url
+            or parsed_url.scheme not in {"http", "https"}
+            or not parsed_url.netloc
+        ):
             return None
 
         return {
@@ -70,7 +74,9 @@ class SerperClient:
                 results.append(cleaned)
         return results
 
-    async def search_async(self, query: str, num_results: int = 10) -> list[dict[str, str]]:
+    async def search_async(
+        self, query: str, num_results: int = 10
+    ) -> list[dict[str, str]]:
         payload = {"q": query, "num": min(max(num_results, 1), 20)}
         try:
             async with httpx.AsyncClient(timeout=20.0) as client:
@@ -93,7 +99,9 @@ class SerperClient:
                 results.append(cleaned)
         return results
 
-    async def search_social(self, platform: str, keyword: str, num_results: int = 10) -> list[dict[str, str]]:
+    async def search_social(
+        self, platform: str, keyword: str, num_results: int = 10
+    ) -> list[dict[str, str]]:
         """
         Search for social media content WITHOUT using the site: operator.
         Instead, we search naturally and then filter the URLs by domain.

@@ -25,6 +25,7 @@ TRUSTED_MEDIA_DOMAINS = {
     "www.instagram.com",
 }
 
+
 class ContentPathwayService:
     def __init__(self, db: Session):
         self.db = db
@@ -54,17 +55,21 @@ class ContentPathwayService:
         url = str(schema["external_media_url"])
         self.assert_trusted_url(url)
 
-        existing = self.repo.get_by_onboarding_content(onboarding_id, content.content_id)
+        existing = self.repo.get_by_onboarding_content(
+            onboarding_id, content.content_id
+        )
         if existing:
             return existing
 
-        record = self.repo.create({
-            "content_id": content.content_id,
-            "onboarding_id": onboarding_id,
-            "external_media_url": url,
-            "media_description": schema["media_description"],
-            "date": schema.get("date") or date.today(),
-        })
+        record = self.repo.create(
+            {
+                "content_id": content.content_id,
+                "onboarding_id": onboarding_id,
+                "external_media_url": url,
+                "media_description": schema["media_description"],
+                "date": schema.get("date") or date.today(),
+            }
+        )
         self.db.commit()
         self.db.refresh(record)
         return record
@@ -74,7 +79,9 @@ class ContentPathwayService:
         if not record:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Content pathway not found")
         if onboarding_id is not None and record.onboarding_id != onboarding_id:
-            raise HTTPException(status.HTTP_403_FORBIDDEN, "Content pathway does not belong to the user")
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN, "Content pathway does not belong to the user"
+            )
         return record
 
     def list_for_onboarding(self, onboarding_id: int, skip: int = 0, limit: int = 50):
@@ -138,7 +145,9 @@ class ContentPathwayService:
                 return
             GeneratedAssessmentService(db).generate_for_content(content_id)
         except Exception as exc:
-            logger.warning(f"Background assessment generation failed for content_id={content_id}: {exc}")
+            logger.warning(
+                f"Background assessment generation failed for content_id={content_id}: {exc}"
+            )
             db.rollback()
         finally:
             db.close()
@@ -147,6 +156,10 @@ class ContentPathwayService:
     def assert_trusted_url(url: str):
         parsed = urlparse(url)
         if parsed.scheme not in {"http", "https"} or not parsed.hostname:
-            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Invalid media URL")
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY, "Invalid media URL"
+            )
         if parsed.hostname.lower() not in TRUSTED_MEDIA_DOMAINS:
-            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Media source is not trusted")
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY, "Media source is not trusted"
+            )

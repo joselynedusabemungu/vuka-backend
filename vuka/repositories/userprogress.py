@@ -1,7 +1,8 @@
 from datetime import date
-from typing import Optional
+
 from sqlalchemy import func
 from sqlalchemy.orm import Session
+
 from vuka.models.userprogress import UserProgress
 from vuka.models.verifiedassessment import VerifiedAssessment
 
@@ -10,11 +11,15 @@ class UserProgressRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    def get(self, progress_id: int) -> Optional[UserProgress]:
+    def get(self, progress_id: int) -> UserProgress | None:
         return self.db.get(UserProgress, progress_id)
 
-    def get_by_assessment(self, assessment_id: int) -> Optional[UserProgress]:
-        return self.db.query(UserProgress).filter(UserProgress.assessment_id == assessment_id).first()
+    def get_by_assessment(self, assessment_id: int) -> UserProgress | None:
+        return (
+            self.db.query(UserProgress)
+            .filter(UserProgress.assessment_id == assessment_id)
+            .first()
+        )
 
     def list(self, skip: int = 0, limit: int = 100):
         return self.db.query(UserProgress).offset(skip).limit(limit).all()
@@ -46,8 +51,14 @@ class UserProgressRepository:
     def get_most_recent_completed(self, user_id: int):
         return (
             self.db.query(UserProgress)
-            .join(VerifiedAssessment, UserProgress.assessment_id == VerifiedAssessment.assessment_id)
-            .filter(UserProgress.user_id == user_id, VerifiedAssessment.status == "completed")
+            .join(
+                VerifiedAssessment,
+                UserProgress.assessment_id == VerifiedAssessment.assessment_id,
+            )
+            .filter(
+                UserProgress.user_id == user_id,
+                VerifiedAssessment.status == "completed",
+            )
             .order_by(VerifiedAssessment.completed_at.desc())
             .first()
         )
@@ -55,8 +66,14 @@ class UserProgressRepository:
     def get_average_score(self, user_id: int) -> int:
         avg = (
             self.db.query(func.avg(UserProgress.score))
-            .join(VerifiedAssessment, UserProgress.assessment_id == VerifiedAssessment.assessment_id)
-            .filter(UserProgress.user_id == user_id, VerifiedAssessment.status == "completed")
+            .join(
+                VerifiedAssessment,
+                UserProgress.assessment_id == VerifiedAssessment.assessment_id,
+            )
+            .filter(
+                UserProgress.user_id == user_id,
+                VerifiedAssessment.status == "completed",
+            )
             .scalar()
         )
         return round(avg) if avg is not None else 0
@@ -64,8 +81,14 @@ class UserProgressRepository:
     def get_average_score_by_category(self, user_id: int):
         rows = (
             self.db.query(VerifiedAssessment.category, func.avg(UserProgress.score))
-            .join(VerifiedAssessment, UserProgress.assessment_id == VerifiedAssessment.assessment_id)
-            .filter(UserProgress.user_id == user_id, VerifiedAssessment.status == "completed")
+            .join(
+                VerifiedAssessment,
+                UserProgress.assessment_id == VerifiedAssessment.assessment_id,
+            )
+            .filter(
+                UserProgress.user_id == user_id,
+                VerifiedAssessment.status == "completed",
+            )
             .group_by(VerifiedAssessment.category)
             .all()
         )
@@ -74,14 +97,18 @@ class UserProgressRepository:
     def get_active_dates_in_range(self, user_id: int, start: date, end: date):
         rows = (
             self.db.query(VerifiedAssessment.completed_at)
-            .join(UserProgress, UserProgress.assessment_id == VerifiedAssessment.assessment_id)
+            .join(
+                UserProgress,
+                UserProgress.assessment_id == VerifiedAssessment.assessment_id,
+            )
             .filter(
                 UserProgress.user_id == user_id,
                 VerifiedAssessment.status == "completed",
                 VerifiedAssessment.completed_at.isnot(None),
                 VerifiedAssessment.completed_at >= start,
                 VerifiedAssessment.completed_at < end,
-            ).all()
+            )
+            .all()
         )
         return {row[0].date() for row in rows}
 
@@ -95,9 +122,16 @@ class UserProgressRepository:
                 UserProgress.score,
                 UserProgress.performance_tier,
             )
-            .join(VerifiedAssessment, UserProgress.assessment_id == VerifiedAssessment.assessment_id)
-            .filter(UserProgress.user_id == user_id, VerifiedAssessment.status == "completed")
+            .join(
+                VerifiedAssessment,
+                UserProgress.assessment_id == VerifiedAssessment.assessment_id,
+            )
+            .filter(
+                UserProgress.user_id == user_id,
+                VerifiedAssessment.status == "completed",
+            )
             .order_by(VerifiedAssessment.completed_at.desc())
-            .limit(limit).all()
+            .limit(limit)
+            .all()
         )
         return rows

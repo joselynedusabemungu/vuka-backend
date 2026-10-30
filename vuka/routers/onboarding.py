@@ -20,9 +20,7 @@ def save_onboarding(
     db: Session = Depends(get_db),
     current_user: Registration = Depends(get_current_user),
 ):
-    return onboarding_service.create_onboarding(
-        db, current_user.user_id, payload
-    )
+    return onboarding_service.create_onboarding(db, current_user.user_id, payload)
 
 
 @router.get("/me", response_model=OnboardingResponse)
@@ -30,9 +28,7 @@ def get_my_onboarding(
     db: Session = Depends(get_db),
     current_user: Registration = Depends(get_current_user),
 ):
-    return onboarding_service.get_my_onboarding(
-        db, current_user.user_id
-    )
+    return onboarding_service.get_my_onboarding(db, current_user.user_id)
 
 
 @router.get("/", response_model=list[OnboardingResponse])
@@ -49,9 +45,7 @@ def get_onboarding(
     db: Session = Depends(get_db),
     current_user: Registration = Depends(get_current_user),
 ):
-    return onboarding_service.get_user_onboarding(
-        db, onboarding_id, current_user
-    )
+    return onboarding_service.get_user_onboarding(db, onboarding_id, current_user)
 
 
 @router.patch("/{onboarding_id}", response_model=OnboardingResponse)

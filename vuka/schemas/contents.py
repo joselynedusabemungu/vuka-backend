@@ -16,15 +16,18 @@ class ContentBase(BaseModel):
 class ContentCreate(ContentBase):
     pass
 
+
 class ContentUpdate(BaseModel):
     external_media_url: HttpUrl | None = None
     source_platform: str | None = None
     media_description: str | None = Field(None, min_length=1, max_length=2000)
     datetime: datetime_type | None = None
 
+
 class ContentResponse(ContentBase):
     content_id: int
     model_config = ConfigDict(from_attributes=True)
+
 
 class PipelineQuerySchema(BaseModel):
 
@@ -53,17 +56,17 @@ class PipelineQuerySchema(BaseModel):
         invalid = sorted(set(normalized) - allowed)
 
         if invalid:
-            raise ValueError(
-                "Unsupported platforms: " + ", ".join(invalid)
-            )
+            raise ValueError("Unsupported platforms: " + ", ".join(invalid))
 
         return list(dict.fromkeys(normalized))
+
 
 class SocialContentItem(BaseModel):
     platform: str
     title: str
     url: HttpUrl
     description: str
+
 
 class QuizQuestion(BaseModel):
     category: str
@@ -72,15 +75,18 @@ class QuizQuestion(BaseModel):
     correct_answer: str
     incorrect_answers: list[str]
 
+
 class EducationPipeline(BaseModel):
     category: int | None
     difficulty: str
     questions: list[QuizQuestion]
 
+
 class OpportunityItem(BaseModel):
     title: str
     url: HttpUrl
     description: str
+
 
 class PipelineResponseSchema(BaseModel):
     keyword: str

@@ -10,12 +10,15 @@ from sqlalchemy.orm import Session
 from vuka.integrations.gemini_client import GeminiClient
 from vuka.integrations.serper_client import SerperClient
 from vuka.models.enums import SubjectFieldEnum
-from vuka.repositories.registration import RegistrationRepository
-from vuka.repositories.opportunity_recomendation import OpportunityRecommendationRepository
 from vuka.repositories.onboarding import OnboardingRepository
+from vuka.repositories.opportunity_recomendation import (
+    OpportunityRecommendationRepository,
+)
+from vuka.repositories.registration import RegistrationRepository
 from vuka.repositories.userprogress import UserProgressRepository
 
 logger = logging.getLogger("vuka.opportunity_recommendation")
+
 
 class OpportunityRecommendationService:
     AVERAGE_OPPORTUNITY_LIMIT = 6
@@ -35,7 +38,7 @@ class OpportunityRecommendationService:
         self.gemini = gemini_client
 
     @staticmethod
-    def tier_from_score(score: int | float) -> str:
+    def tier_from_score(score: float) -> str:
         if score >= 75:
             return "High"
         if score >= 50:
@@ -71,7 +74,9 @@ class OpportunityRecommendationService:
         tier = progress.performance_tier or self.tier_from_score(progress.score or 0)
 
         return {
-            "opportunities": self.list_opportunities_for_user(user_id, progress.progress_id),
+            "opportunities": self.list_opportunities_for_user(
+                user_id, progress.progress_id
+            ),
             "performance_tier": tier,
             "progress_id": progress.progress_id,
             "message": "Latest matched opportunities for your completed assessment.",
@@ -84,11 +89,15 @@ class OpportunityRecommendationService:
 
         progress = self.progress_repo.get_most_recent_completed(user_id)
         if not progress:
-            raise HTTPException(status.HTTP_409_CONFLICT, "Complete an assessment first")
+            raise HTTPException(
+                status.HTTP_409_CONFLICT, "Complete an assessment first"
+            )
 
         existing_matches = self.repository.list_by_user(user_id, progress.progress_id)
         if existing_matches:
-            tier = progress.performance_tier or self.tier_from_score(progress.score or 0)
+            tier = progress.performance_tier or self.tier_from_score(
+                progress.score or 0
+            )
             return {
                 "opportunities": existing_matches,
                 "performance_tier": tier,
@@ -101,11 +110,13 @@ class OpportunityRecommendationService:
 
         progress = self.progress_repo.get_most_recent_completed(user_id)
         if not progress:
-            raise HTTPException(status.HTTP_409_CONFLICT, "Complete an assessment first")
+            raise HTTPException(
+                status.HTTP_409_CONFLICT, "Complete an assessment first"
+            )
 
         score = progress.score or 0
         tier = progress.performance_tier or self.tier_from_score(score)
-        limit, access = self.tier_access(tier)
+        limit, _access = self.tier_access(tier)
 
         if limit == 0:
             return {
@@ -115,12 +126,16 @@ class OpportunityRecommendationService:
                 "message": "Opportunities are locked for the Low tier. Retake the assessment.",
             }
 
-        interests = " ".join(onboarding.user_interests.get("selected", [])) if isinstance(onboarding.user_interests, dict) else str(onboarding.user_interests)
+        interests = (
+            " ".join(onboarding.user_interests.get("selected", []))
+            if isinstance(onboarding.user_interests, dict)
+            else str(onboarding.user_interests)
+        )
         career = onboarding.career_aspirations or ""
-        
+
         current_year = datetime.now().year
         query = f"Kenya {interests} {career} scholarships bootcamps fellowships {current_year} apply"
-        
+
         logger.info(f"Live searching opportunities with query: {query}")
 
         client = self.serper or SerperClient()
@@ -128,7 +143,9 @@ class OpportunityRecommendationService:
             results = client.search_opportunities(query, num_results=15)
         except Exception as exc:
             logger.error(f"Serper search failed: {exc}")
-            raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"Live opportunity search failed: {exc}")
+            raise HTTPException(
+                status.HTTP_502_BAD_GATEWAY, f"Live opportunity search failed: {exc}"
+            )
 
         if not results:
             return {
@@ -143,7 +160,7 @@ class OpportunityRecommendationService:
                 "title": r.get("title", ""),
                 "url": r.get("url", ""),
                 "description": r.get("description", ""),
-                "source": urlparse(r.get("url", "")).netloc
+                "source": urlparse(r.get("url", "")).netloc,
             }
             for r in results
         ]
@@ -156,7 +173,7 @@ class OpportunityRecommendationService:
 
         gemini = self.gemini or GeminiClient()
         ranked = []
-        
+
         try:
             ranked = gemini.rank_opportunities(profile, tier, candidates, limit=limit)
         except Exception as exc:
@@ -167,8 +184,10 @@ class OpportunityRecommendationService:
                 item["match_reason"] = "Live search result based on your career goals."
 
         stored = []
-        existing_urls = self.repository.list_urls_for_user_progress(user_id, progress.progress_id)
-        
+        existing_urls = self.repository.list_urls_for_user_progress(
+            user_id, progress.progress_id
+        )
+
         for item in ranked:
             url = item.get("url")
             if not url or url in existing_urls:
@@ -176,23 +195,32 @@ class OpportunityRecommendationService:
 
             subject = SubjectFieldEnum.OTHER
             text = (item.get("title", "") + item.get("description", "")).lower()
-            if "tech" in text or "code" in text or "software" in text: subject = SubjectFieldEnum.TECH
-            elif "finance" in text or "fintech" in text: subject = SubjectFieldEnum.FINTECH
-            elif "health" in text: subject = SubjectFieldEnum.HEALTHCARE
-            elif "business" in text: subject = SubjectFieldEnum.BUSINESS
+            if "tech" in text or "code" in text or "software" in text:
+                subject = SubjectFieldEnum.TECH
+            elif "finance" in text or "fintech" in text:
+                subject = SubjectFieldEnum.FINTECH
+            elif "health" in text:
+                subject = SubjectFieldEnum.HEALTHCARE
+            elif "business" in text:
+                subject = SubjectFieldEnum.BUSINESS
 
-            record = self.repository.create({
-                "user_id": user_id,
-                "progress_id": progress.progress_id,
-                "subject_field": subject,
-                "external_media_url": url,
-                "source_platform": urlparse(url).netloc or "Search",
-                "media_description": item.get("description") or item.get("title") or "Opportunity",
-                "opportunity_date": datetime.now(timezone.utc).replace(tzinfo=None),
-                "performance_tier": tier,
-                "match_score": item.get("match_score"),
-                "match_reason": item.get("match_reason") or "Matched to your profile."
-            })
+            record = self.repository.create(
+                {
+                    "user_id": user_id,
+                    "progress_id": progress.progress_id,
+                    "subject_field": subject,
+                    "external_media_url": url,
+                    "source_platform": urlparse(url).netloc or "Search",
+                    "media_description": item.get("description")
+                    or item.get("title")
+                    or "Opportunity",
+                    "opportunity_date": datetime.now(timezone.utc).replace(tzinfo=None),
+                    "performance_tier": tier,
+                    "match_score": item.get("match_score"),
+                    "match_reason": item.get("match_reason")
+                    or "Matched to your profile.",
+                }
+            )
             stored.append(record)
 
         self.db.commit()

@@ -1,6 +1,8 @@
-from contextlib import asynccontextmanager
 import os
+from contextlib import asynccontextmanager
+
 from dotenv import load_dotenv
+
 load_dotenv()
 
 from fastapi import FastAPI, Request
@@ -8,13 +10,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import OperationalError
 
-from vuka.routers import admin, opportunity_recommendation, registration, onboarding
+from vuka.routers import admin, onboarding, opportunity_recommendation, registration
 from vuka.routers.content_pathway import router as pathway_router
 from vuka.routers.contents import router as content_router
-from vuka.routers.verifiedassessment import router as verified_assessment_router
-from vuka.routers.userprogress import router as user_progress_router
 from vuka.routers.generated_assessment import router as generated_assessment_router
+from vuka.routers.userprogress import router as user_progress_router
 from vuka.routers.verification import router as verification_router
+from vuka.routers.verifiedassessment import router as verified_assessment_router
 
 
 @asynccontextmanager
@@ -43,7 +45,9 @@ async def security_headers(request: Request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "no-referrer"
     if request.url.scheme == "https":
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Strict-Transport-Security"] = (
+            "max-age=31536000; includeSubDomains"
+        )
     return response
 
 

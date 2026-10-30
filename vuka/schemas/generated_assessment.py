@@ -1,6 +1,8 @@
 import json
 from datetime import datetime
+
 from pydantic import BaseModel, Field, field_validator, model_validator
+
 from vuka.models.enums import CategoryEnum
 
 
@@ -41,7 +43,11 @@ class GeneratedAssessmentResponse(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def parse_questions_json(cls, data):
-        questions = getattr(data, "questions", None) if not isinstance(data, dict) else data.get("questions")
+        questions = (
+            getattr(data, "questions", None)
+            if not isinstance(data, dict)
+            else data.get("questions")
+        )
         if isinstance(questions, str):
             parsed = json.loads(questions)
             if isinstance(data, dict):

@@ -1,22 +1,18 @@
-from typing import Optional
 from pydantic import BaseModel, EmailStr
 
 
 class UserRegisterInput(BaseModel):
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    username: Optional[str] = None
+    first_name: str | None = None
+    last_name: str | None = None
+    username: str | None = None
     email: EmailStr
     password: str
-
-
-
 
 
 class UserResponse(BaseModel):
     user_id: int
     email: str
-    username: Optional[str] = None
+    username: str | None = None
     user_type: str
     is_active: bool
     mfa_enabled: bool = False

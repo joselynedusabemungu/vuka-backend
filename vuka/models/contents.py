@@ -1,5 +1,6 @@
 from sqlalchemy import Column, DateTime, Integer, Text
 from sqlalchemy.orm import relationship
+
 from database import Base
 
 
@@ -13,4 +14,6 @@ class Content(Base):
     datetime = Column(DateTime, nullable=False)
 
     content_pathway = relationship("ContentPathway", back_populates="content")
-    generated_assessment = relationship("GeneratedAssessment", back_populates="content", uselist=False)
+    generated_assessment = relationship(
+        "GeneratedAssessment", back_populates="content", uselist=False
+    )

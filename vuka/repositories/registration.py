@@ -17,9 +17,7 @@ class RegistrationRepository:
 
     def get_registrations(self):
         return (
-            self.db.query(Registration)
-            .filter(Registration.is_active.is_(True))
-            .all()
+            self.db.query(Registration).filter(Registration.is_active.is_(True)).all()
         )
 
     def get_registration(self, user_id: int):
@@ -45,7 +43,9 @@ class RegistrationRepository:
         return user
 
     def delete_registration(self, user_id: int):
-        user = self.db.query(Registration).filter(Registration.user_id == user_id).first()
+        user = (
+            self.db.query(Registration).filter(Registration.user_id == user_id).first()
+        )
         if user is None:
             return None
 

@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+
 from vuka.models.generated_assessment import GeneratedAssessment
 
 
@@ -8,7 +9,11 @@ class GeneratedAssessmentRepository:
         self.model = GeneratedAssessment
 
     def get_by_content_id(self, content_id: int):
-        return self.db.query(self.model).filter(self.model.content_id == content_id).first()
+        return (
+            self.db.query(self.model)
+            .filter(self.model.content_id == content_id)
+            .first()
+        )
 
     def get_by_id(self, assessment_id: int):
         return self.db.get(self.model, assessment_id)
@@ -16,7 +21,9 @@ class GeneratedAssessmentRepository:
     def get_all(self, skip: int = 0, limit: int = 100):
         return self.db.query(self.model).offset(skip).limit(limit).all()
 
-    def upsert(self, content_id: int, category: str, questions_json: str, model_used: str):
+    def upsert(
+        self, content_id: int, category: str, questions_json: str, model_used: str
+    ):
         existing = self.get_by_content_id(content_id)
         if existing:
             existing.category = category

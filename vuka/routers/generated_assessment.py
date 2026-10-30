@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
+
 from database import get_db
 from vuka.dependency import get_current_user
 from vuka.models.registration import Registration
@@ -23,7 +24,9 @@ def public_response(record, service: GeneratedAssessmentService):
         "assessment_id": record.assessment_id,
         "content_id": record.content_id,
         "category": record.category,
-        "questions": [{"question": q["question"], "options": q["options"]} for q in questions],
+        "questions": [
+            {"question": q["question"], "options": q["options"]} for q in questions
+        ],
         "model_used": record.model_used,
         "generated_at": record.generated_at,
     }
@@ -37,7 +40,9 @@ def generate_assessment(
     current_user: Registration = Depends(get_current_user),
 ):
     service.assert_user_can_access_content(current_user.user_id, content_id)
-    record = service.generate_for_content(content_id, payload.num_questions, payload.category)
+    record = service.generate_for_content(
+        content_id, payload.num_questions, payload.category
+    )
     return public_response(record, service)
 
 

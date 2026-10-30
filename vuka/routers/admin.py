@@ -8,7 +8,6 @@ from vuka.schemas.registration import RegistrationResponse, RegistrationUpdate
 from vuka.services import registration as registration_service
 from vuka.services.admin import AdminService
 
-
 router = APIRouter(tags=["Admin"])
 
 
